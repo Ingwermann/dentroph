@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DENTROPH</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="config.js"></script>
+    <style>
+        .viewer-bg { background-color: #050505; position: relative; overflow: hidden; }
+        #xray-display { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .nerve-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; }
+        /* 드래그 중일 때 스타일 */
+        .drag-over { border-color: #3b82f6 !important; background-color: #eff6ff !important; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-gray-900 overflow-hidden">
+
+    <header class="bg-slate-900 text-white p-4 flex justify-between items-center shadow-xl">
+        <h1 class="text-xl font-bold tracking-tighter">DEN<span class="text-blue-400">TROPH</span></h1>
+        <div class="flex items-center gap-4 text-sm font-medium">
+            <span class="bg-blue-900/50 px-3 py-1 rounded-full border border-blue-700 text-blue-200 text-[10px]">AI Engine v1.0 Active</span>
+            <span class="opacity-80">Dr. Partner</span>
+        </div>
+    </header>
+
+    <div class="flex h-[calc(100vh-64px)] p-6 gap-6">
+        
+        <aside class="w-1/4 flex flex-col gap-4 overflow-y-auto pr-2">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                <h2 class="text-[11px] font-black text-blue-600 uppercase tracking-widest mb-4 font-mono">Patient Details</h2>
+                <div class="space-y-3">
+                    <input type="text" placeholder="Patient ID" class="w-full p-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs">
+                    <input type="text" placeholder="Patient Name" class="w-full p-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs">
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" placeholder="Age" class="w-full p-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs">
+                        <select class="w-full p-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs text-gray-500">
+                            <option disabled selected>Sex</option>
+                            <option>Male</option>
+                            <option>Female</option>
+                        </select>
+                    </div>
+
+                    <div class="relative">
+                        <span class="absolute left-3 top-[-7px] bg-white px-1 text-[9px] text-gray-400 font-bold uppercase">Birthday</span>
+                        <input type="date" class="w-full p-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs text-gray-400">
+                    </div>
+                    <input type="text" placeholder="Nationality" class="w-full p-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs">
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex flex-col min-h-[220px]">
+                <h2 class="text-[11px] font-black text-blue-600 uppercase tracking-widest mb-3 font-mono">Image Source</h2>
+                <div id="drop-zone" class="flex-grow border-2 border-dashed border-gray-200 rounded-2xl p-4 text-center hover:border-blue-400 hover:bg-blue-50/30 transition-all cursor-pointer flex flex-col justify-center items-center group">
+                    <div class="bg-blue-50 p-3 rounded-full mb-2 text-blue-500 group-hover:scale-110 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                    </div>
+                    <p class="text-[11px] font-bold text-gray-500">Click or Drag X-ray</p>
+                    <input type="file" id="file-input" class="hidden" accept="image/*">
+                </div>
+                <button id="analyze-btn" class="mt-4 w-full bg-blue-600 text-white py-3.5 rounded-xl font-black text-[11px] tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all disabled:bg-gray-200 disabled:shadow-none uppercase" disabled>Run AI Analysis</button>
+            </div>
+        </aside>
+
+        <main class="w-3/4 flex flex-col gap-6">
+            <div class="flex-[2] viewer-bg rounded-3xl shadow-inner flex items-center justify-center border-8 border-slate-200/50">
+                <img id="xray-display" class="hidden">
+                <div id="placeholder-text" class="text-slate-600 font-mono text-[10px] uppercase tracking-[0.3em] animate-pulse">Waiting for image input...</div>
+                
+                <svg id="ai-overlay" class="nerve-overlay inset-0" viewBox="0 0 800 400">
+                    <path d="M 150 300 Q 400 350 650 300" stroke="#ff4d4d" stroke-width="3" fill="none" stroke-dasharray="8,4" />
+                    <rect x="380" y="180" width="40" height="70" stroke="#4ade80" stroke-width="2" fill="transparent" />
+                    <text x="380" y="170" fill="#4ade80" font-size="14" font-weight="bold">#26 Caries</text>
+                </svg>
+            </div>
+
+            <div class="flex-1 bg-white p-8 rounded-3xl shadow-sm border border-gray-200 overflow-y-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-[11px] font-black text-blue-600 uppercase tracking-widest font-mono">AI Analysis Report</h2>
+                    <span id="status-badge" class="px-3 py-1 bg-gray-100 text-gray-400 text-[9px] font-bold rounded-full uppercase tracking-tighter">Ready</span>
+                </div>
+                <div id="result-content" class="grid grid-cols-2 gap-4 opacity-30 transition-opacity duration-500">
+                    <div class="p-4 border border-gray-100 rounded-2xl bg-gray-50">
+                        <p class="text-[9px] font-bold text-gray-400 uppercase">Detection</p>
+                        <p class="text-xs font-bold text-gray-700 mt-1">#38 Impacted Molar Found</p>
+                    </div>
+                    <div class="p-4 border border-blue-100 rounded-2xl bg-blue-50">
+                        <p class="text-[9px] font-bold text-blue-400 uppercase">Measurement</p>
+                        <p class="text-xs font-bold text-blue-700 mt-1">Nerve Distance: 3.2mm</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('file-input');
+        const dropZone = document.getElementById('drop-zone');
+        const xrayDisplay = document.getElementById('xray-display');
+        const placeholderText = document.getElementById('placeholder-text');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const aiOverlay = document.getElementById('ai-overlay');
+        const resultContent = document.getElementById('result-content');
+        const statusBadge = document.getElementById('status-badge');
+
+        // 1. 클릭 시 파일 탐색기 열기
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        // 2. 드래그 앤 드롭 이벤트 처리
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        // 3. 파일 처리 및 이미지 표시
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please upload an image file.');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                xrayDisplay.src = e.target.result;
+                xrayDisplay.classList.remove('hidden');
+                placeholderText.classList.add('hidden');
+                analyzeBtn.disabled = false;
+                // 새로운 사진 올리면 이전 결과 초기화
+                aiOverlay.style.display = 'none';
+                resultContent.style.opacity = '0.3';
+                statusBadge.innerText = 'Ready';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 4. 분석 버튼 클릭 시 시뮬레이션
+        analyzeBtn.addEventListener('click', async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            analyzeBtn.innerText = 'Analyzing...';
+            analyzeBtn.disabled = true; 
+            // 폼 데이터 생성 (사진 담기)
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                // [중요] 여기에 위에서 생성된 ngrok 주소를 넣으세요!
+                const response = await fetch('${DENTROPH_CONFIG.API_URL}/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                // 1. AI가 분석한 이미지로 교체
+                xrayDisplay.src = data.image; 
+                
+                // 2. 리포트 데이터 업데이트
+                const resultContent = document.getElementById('result-content');
+                resultContent.innerHTML = data.analysis.map(item => `
+                    <div class="p-4 border border-blue-100 rounded-2xl bg-blue-50">
+                        <p class="text-[9px] font-bold text-blue-400 uppercase">Detection</p>
+                        <p class="text-xs font-bold text-blue-700 mt-1">${item.label}: ${item.conf}</p>
+                    </div>
+                `).join('');
+
+                resultContent.style.opacity = '1';
+                statusBadge.innerText = 'Completed';
+                statusBadge.className = "px-3 py-1 bg-green-100 text-green-600 text-[9px] font-bold rounded-full uppercase tracking-tighter";
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('AI 서버 연결 실패!');
+            } finally {
+                analyzeBtn.innerText = 'Analysis Complete';
+                analyzeBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
